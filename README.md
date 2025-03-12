@@ -5,7 +5,7 @@
     </picture>
 </p>
 <p align="center">
-	0.3.0 release is here 🎉<br />
+	0.3.1 release is here 🎉<br />
 	Please <a href="#try-it-out">try</a> it out!
 </p>
 
