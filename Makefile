@@ -58,9 +58,17 @@ else
 	ERROR_ON_WARNING =
 endif
 
-COMPILER_FLAGS=-Wno-sign-compare -Wshadow -Wswitch -Wunused-parameter -Wunreachable-code -Wno-unknown-pragmas -Wall -Wextra ${ERROR_ON_WARNING}
+COMPILER_FLAGS=-Wno-sign-compare -Wshadow -Wswitch -Wunused-parameter -Wunreachable-code -Wno-unknown-pragmas -Wall -Wextra ${ERROR_ON_WARNING} -fdata-sections -ffunction-sections
 
-override PG_CPPFLAGS += -Iinclude -isystem third_party/duckdb/src/include -isystem third_party/duckdb/third_party/re2 -isystem $(INCLUDEDIR_SERVER) ${COMPILER_FLAGS}
+override PG_CPPFLAGS += -Iinclude \
+	-isystem third_party/duckdb/extension/parquet/include \
+	-isystem third_party/duckdb/src/include \
+	-isystem third_party/duckdb/third_party/fastpforlib \
+	-isystem third_party/duckdb/third_party/parquet \
+	-isystem third_party/duckdb/third_party/re2 \
+	-isystem third_party/duckdb/third_party/thrift \
+	-isystem $(INCLUDEDIR_SERVER) \
+	${COMPILER_FLAGS}
 override PG_CXXFLAGS += -std=c++17 ${DUCKDB_BUILD_CXX_FLAGS} ${COMPILER_FLAGS} -Wno-register -Weffc++
 # Ignore declaration-after-statement warnings in our code. Postgres enforces
 # this because their ancient style guide requires it, but we don't care. It
@@ -148,4 +156,4 @@ format:
 
 format-all:
 	find src include -iname '*.hpp' -o -iname '*.h' -o -iname '*.cpp' -o -iname '*.c' | xargs clang-format -i
-	ruff format
+#	ruff format
