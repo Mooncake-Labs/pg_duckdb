@@ -1,6 +1,7 @@
 #include "duckdb.hpp"
 
 #include "pgduckdb/pgduckdb_planner.hpp"
+#include "pgduckdb/pg/relations.hpp"
 #include "pgduckdb/pg/transactions.hpp"
 #include "pgduckdb/pgduckdb_xact.hpp"
 #include "pgduckdb/pgduckdb_hooks.hpp"
@@ -128,6 +129,52 @@ NeedsDuckdbExecution(Query *query) {
 	return ContainsDuckdbItems((Node *)query, NULL);
 }
 
+static bool
+IsMooncakeTable(Oid relid) {
+	if (relid == InvalidOid) {
+		return false;
+	}
+
+	auto rel = RelationIdGetRelation(relid);
+	bool result = pgduckdb::IsMooncakeTable(rel);
+	RelationClose(rel);
+	return result;
+}
+
+static bool
+ContainsMooncakeTables(List *rte_list) {
+	foreach_node(RangeTblEntry, rte, rte_list) {
+		if (IsMooncakeTable(rte->relid)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+static bool
+ContainsMooncakeItems(Node *node, void *context) {
+	if (node == NULL)
+		return false;
+
+	if (IsA(node, Query)) {
+		Query *query = (Query *)node;
+		if (ContainsMooncakeTables(query->rtable)) {
+			return true;
+		}
+#if PG_VERSION_NUM >= 160000
+		return query_tree_walker(query, ContainsMooncakeItems, context, 0);
+#else
+		return query_tree_walker(query, (bool (*)())((void *)ContainsMooncakeItems), context, 0);
+#endif
+	}
+
+#if PG_VERSION_NUM >= 160000
+	return expression_tree_walker(node, ContainsMooncakeItems, context);
+#else
+	return expression_tree_walker(node, (bool (*)())((void *)ContainsMooncakeItems), context);
+#endif
+}
+
 /*
  * We only check ContainsFromClause if duckdb.force_execution is set to true.
  *
@@ -144,7 +191,7 @@ NeedsDuckdbExecution(Query *query) {
  * requires duckdb e.g. due to a duckdb-only function being used, we'll
  * still executing this in DuckDB.
  */
-static bool
+[[maybe_unused]] static bool
 ContainsFromClause(Query *query) {
 	return query->rtable;
 }
@@ -202,7 +249,7 @@ DuckdbPlannerHook_Cpp(Query *parse, const char *query_string, int cursor_options
 			pgduckdb::IsAllowedStatement(parse, true);
 
 			return DuckdbPlanNode(parse, query_string, cursor_options, bound_params, true);
-		} else if (duckdb_force_execution && pgduckdb::IsAllowedStatement(parse) && ContainsFromClause(parse)) {
+		} else if (ContainsMooncakeItems((Node *)parse, NULL) && pgduckdb::IsAllowedStatement(parse)) {
 			pgduckdb::TriggerActivity();
 			PlannedStmt *duckdbPlan = DuckdbPlanNode(parse, query_string, cursor_options, bound_params, false);
 			if (duckdbPlan) {

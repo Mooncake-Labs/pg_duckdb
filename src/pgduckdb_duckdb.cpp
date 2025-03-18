@@ -231,7 +231,7 @@ DuckDBManager::Initialize() {
 	}
 
 	LoadFunctions(context);
-	LoadExtensions(context);
+	// LoadExtensions(context);
 }
 
 void
@@ -252,7 +252,7 @@ DuckDBManager::Reset() {
 
 int64
 GetSeqLastValue(const char *seq_name) {
-	Oid duckdb_namespace = get_namespace_oid("duckdb", false);
+	Oid duckdb_namespace = get_namespace_oid("mooncake", false);
 	Oid table_seq_oid = get_relname_relid(seq_name, duckdb_namespace);
 	return PostgresFunctionGuard(DirectFunctionCall1Coll, pg_sequence_last_value, InvalidOid, table_seq_oid);
 }
@@ -372,9 +372,9 @@ DuckDBManager::CreateConnection() {
 
 	auto &instance = Get();
 	auto connection = duckdb::make_uniq<duckdb::Connection>(*instance.database);
-	auto &context = *connection->context;
+	// auto &context = *connection->context;
 
-	instance.RefreshConnectionState(context);
+	// instance.RefreshConnectionState(context);
 
 	return connection;
 }
@@ -406,7 +406,7 @@ DuckDBManager::GetConnection(bool force_transaction) {
 		}
 	}
 
-	instance.RefreshConnectionState(context);
+	// instance.RefreshConnectionState(context);
 
 	return instance.connection.get();
 }
