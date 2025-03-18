@@ -14,14 +14,6 @@ extern "C" {
 namespace pgduckdb {
 
 namespace {
-char *
-MakeDirName(const char *name) {
-	StringInfoData buf;
-	initStringInfo(&buf);
-	appendStringInfo(&buf, "%s/pg_duckdb/%s", DataDir, name);
-	return buf.data;
-}
-
 template <typename T>
 bool
 GucCheckDuckDBNotInitdHook(T *, void **, GucSource) {
@@ -127,8 +119,8 @@ bool duckdb_allow_community_extensions = false;
 bool duckdb_allow_unsigned_extensions = false;
 bool duckdb_autoinstall_known_extensions = true;
 bool duckdb_autoload_known_extensions = true;
-char *duckdb_temporary_directory = MakeDirName("temp");
-char *duckdb_extension_directory = MakeDirName("extensions");
+char *duckdb_temporary_directory = nullptr;
+char *duckdb_extension_directory = nullptr;
 char *duckdb_max_temp_directory_size = strdup("");
 char *duckdb_default_collation = strdup("C");
 
