@@ -9,7 +9,7 @@ namespace pgduckdb {
 
 class PostgresSchema : public duckdb::SchemaCatalogEntry {
 public:
-	PostgresSchema(duckdb::Catalog &catalog, duckdb::CreateSchemaInfo &info, Snapshot snapshot);
+	PostgresSchema(duckdb::Catalog &catalog, duckdb::CreateSchemaInfo &info, Snapshot snapshot, uint64_t lsn);
 
 public:
 	// -- Schema API --
@@ -44,6 +44,7 @@ public:
 
 public:
 	Snapshot snapshot;
+	uint64_t lsn;
 	duckdb::Catalog &catalog;
 };
 

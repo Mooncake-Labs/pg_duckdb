@@ -38,6 +38,16 @@ extern "C" {
 #include "utils/lsyscache.h"  // get_relname_relid
 }
 
+namespace {
+char *
+MakeDirName(const char *name) {
+	StringInfoData buf;
+	initStringInfo(&buf);
+	appendStringInfo(&buf, "%s/pg_duckdb/%s", DataDir, name);
+	return buf.data;
+}
+} // namespace
+
 namespace pgduckdb {
 
 const char *
@@ -90,6 +100,9 @@ ToString(char *value) {
 void
 DuckDBManager::Initialize() {
 	elog(DEBUG2, "(PGDuckDB/DuckDBManager) Creating DuckDB instance");
+
+	duckdb_temporary_directory = MakeDirName("temp");
+	duckdb_extension_directory = MakeDirName("extensions");
 
 	// Make sure directories provided in config exists
 	std::filesystem::create_directories(duckdb_temporary_directory);
@@ -190,10 +203,10 @@ DuckDBManager::Initialize() {
 	}
 
 	LoadFunctions(context);
-	if (duckdb_autoinstall_known_extensions) {
-		InstallExtensions(context);
-	}
-	LoadExtensions(context);
+	// if (duckdb_autoinstall_known_extensions) {
+	// 	InstallExtensions(context);
+	// }
+	// LoadExtensions(context);
 }
 
 void
@@ -312,9 +325,9 @@ DuckDBManager::CreateConnection() {
 
 	auto &instance = Get();
 	auto connection = duckdb::make_uniq<duckdb::Connection>(*instance.database);
-	auto &context = *connection->context;
+	// auto &context = *connection->context;
 
-	instance.RefreshConnectionState(context);
+	// instance.RefreshConnectionState(context);
 
 	return connection;
 }
@@ -346,7 +359,7 @@ DuckDBManager::GetConnection(bool force_transaction) {
 		}
 	}
 
-	instance.RefreshConnectionState(context);
+	// instance.RefreshConnectionState(context);
 
 	return instance.connection.get();
 }

@@ -1,0 +1,32 @@
+#include "pgduckdb/catalog/mooncake_table_metadata.hpp"
+#include "pgduckdb/catalog/pgduckdb_table.hpp"
+
+namespace pgduckdb {
+
+class MooncakeTable : public PostgresTable {
+public:
+	MooncakeTable(duckdb::Catalog &_catalog, duckdb::SchemaCatalogEntry &_schema, duckdb::CreateTableInfo &info,
+	              Relation _rel, Cardinality _cardinality, Snapshot _snapshot, uint32_t _table_id, uint64_t _lsn)
+	    : PostgresTable(_catalog, _schema, info, _rel, _cardinality, _snapshot), table_id(_table_id), lsn(_lsn),
+	      data(nullptr) {
+	}
+
+	~MooncakeTable();
+
+public:
+	duckdb::TableFunction GetScanFunction(duckdb::ClientContext &context,
+	                                      duckdb::unique_ptr<duckdb::FunctionData> &bind_data) override;
+
+	MooncakeTableMetadata &GetTableMetadata(duckdb::ClientContext &context);
+
+private:
+	uint32_t table_id;
+	uint64_t lsn;
+
+	duckdb::mutex lock;
+	uint8_t *data;
+	size_t len;
+	MooncakeTableMetadata metadata;
+};
+
+} // namespace pgduckdb
