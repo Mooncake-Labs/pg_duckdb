@@ -257,9 +257,7 @@ pgduckdb_background_worker_main(Datum main_arg) {
 	SpinLockRelease(&pgduckdb::BgwShmemStruct->lock);
 
 	PG_TRY();
-	{
-		pgduckdb::BgwMainLoop();
-	}
+	{ pgduckdb::BgwMainLoop(); }
 	PG_FINALLY();
 	{
 		// Remove state entry.
@@ -292,9 +290,7 @@ force_motherduck_sync(PG_FUNCTION_ARGS) {
 		pgduckdb::SyncMotherDuckCatalogsWithPg(drop_with_cascade, *connection->context);
 	}
 	PG_FINALLY();
-	{
-		pgduckdb::doing_motherduck_sync = false;
-	}
+	{ pgduckdb::doing_motherduck_sync = false; }
 	PG_END_TRY();
 	SPI_finish();
 	PG_RETURN_VOID();
@@ -672,9 +668,7 @@ SPI_run_utility_command(const char *query) {
 	 */
 	BeginInternalSubTransaction(NULL);
 	PG_TRY();
-	{
-		ret = SPI_exec(query, 0);
-	}
+	{ ret = SPI_exec(query, 0); }
 	PG_CATCH();
 	{
 		MemoryContextSwitchTo(old_context);
