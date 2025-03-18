@@ -1,6 +1,7 @@
 #include "duckdb.hpp"
 
 #include "pgduckdb/pgduckdb_planner.hpp"
+#include "pgduckdb/pg/relations.hpp"
 #include "pgduckdb/pg/transactions.hpp"
 #include "pgduckdb/pgduckdb_xact.hpp"
 #include "pgduckdb/pgduckdb_hooks.hpp"
@@ -76,9 +77,21 @@ IsDuckdbTable(Oid relid) {
 }
 
 static bool
+IsMooncakeTable(Oid relid) {
+	if (relid == InvalidOid) {
+		return false;
+	}
+
+	auto rel = RelationIdGetRelation(relid);
+	bool result = pgduckdb::IsMooncakeTable(rel);
+	RelationClose(rel);
+	return result;
+}
+
+static bool
 ContainsDuckdbTables(List *rte_list) {
 	foreach_node(RangeTblEntry, rte, rte_list) {
-		if (IsDuckdbTable(rte->relid)) {
+		if (IsMooncakeTable(rte->relid)) {
 			return true;
 		}
 	}
@@ -198,6 +211,10 @@ IsAllowedStatement(Query *query, bool throw_error) {
 	if (query->commandType != CMD_SELECT) {
 		if (query->rtable != NULL) {
 			RangeTblEntry *resultRte = list_nth_node(RangeTblEntry, query->rtable, query->resultRelation - 1);
+			if (::IsMooncakeTable(resultRte->relid)) {
+				elog(elevel, "Writing directly to Mooncake tables is not supported");
+				return false;
+			}
 			if (!::IsDuckdbTable(resultRte->relid)) {
 				elog(elevel, "DuckDB does not support modififying Postgres tables");
 				return false;
