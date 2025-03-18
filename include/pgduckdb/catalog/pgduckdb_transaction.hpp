@@ -39,7 +39,7 @@ public:
 class PostgresTransaction : public duckdb::Transaction {
 public:
 	PostgresTransaction(duckdb::TransactionManager &manager, duckdb::ClientContext &context, PostgresCatalog &catalog,
-	                    Snapshot snapshot);
+	                    Snapshot snapshot, uint64_t lsn);
 	~PostgresTransaction() override;
 
 	duckdb::optional_ptr<duckdb::CatalogEntry> GetCatalogEntry(duckdb::CatalogType type, const duckdb::string &schema,
@@ -50,6 +50,7 @@ private:
 
 	PostgresCatalog &catalog;
 	Snapshot snapshot;
+	uint64_t lsn;
 };
 
 } // namespace pgduckdb

@@ -14,16 +14,6 @@ extern "C" {
 #include "pgduckdb/pgduckdb_node.hpp"
 #include "pgduckdb/pgduckdb_xact.hpp"
 
-namespace {
-char *
-MakeDirName(const char *name) {
-	StringInfoData buf;
-	initStringInfo(&buf);
-	appendStringInfo(&buf, "%s/pg_duckdb/%s", DataDir, name);
-	return buf.data;
-}
-} // namespace
-
 bool duckdb_force_execution = false;
 bool duckdb_unsafe_allow_mixed_transactions = false;
 bool duckdb_log_pg_explain = false;
@@ -39,26 +29,26 @@ bool duckdb_allow_community_extensions = false;
 bool duckdb_allow_unsigned_extensions = false;
 bool duckdb_autoinstall_known_extensions = true;
 bool duckdb_autoload_known_extensions = true;
-char *duckdb_temporary_directory = MakeDirName("temp");
-char *duckdb_extension_directory = MakeDirName("extensions");
+char *duckdb_temporary_directory = nullptr;
+char *duckdb_extension_directory = nullptr;
 char *duckdb_max_temp_directory_size = strdup("");
 
 extern "C" {
-PG_MODULE_MAGIC;
+// PG_MODULE_MAGIC;
 
 void DuckdbInitGUC();
 
 void
-_PG_init(void) {
+pgduckdb_init(void) {
 	if (!process_shared_preload_libraries_in_progress) {
-		ereport(ERROR, (errmsg("pg_duckdb needs to be loaded via shared_preload_libraries"),
-		                errhint("Add pg_duckdb to shared_preload_libraries.")));
+		ereport(ERROR, (errmsg("pg_mooncake needs to be loaded via shared_preload_libraries"),
+		                errhint("Add pg_mooncake to shared_preload_libraries.")));
 	}
 
-	DuckdbInitGUC();
+	// DuckdbInitGUC();
 	DuckdbInitHooks();
 	DuckdbInitNode();
-	pgduckdb::InitBackgroundWorkersShmem();
+	// pgduckdb::InitBackgroundWorkersShmem();
 	pgduckdb::RegisterDuckdbXactCallback();
 }
 } // extern "C"
