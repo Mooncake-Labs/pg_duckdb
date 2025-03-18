@@ -14,24 +14,24 @@ extern "C" {
 
 extern "C" {
 
-#ifdef PG_MODULE_MAGIC_EXT
-PG_MODULE_MAGIC_EXT(.name = "pg_duckdb", .version = "1.0.0");
-#else
-PG_MODULE_MAGIC;
-#endif
+// #ifdef PG_MODULE_MAGIC_EXT
+// PG_MODULE_MAGIC_EXT(.name = "pg_duckdb", .version = "1.0.0");
+// #else
+// PG_MODULE_MAGIC;
+// #endif
 
 void
-_PG_init(void) {
+pgduckdb_init(void) {
 	if (!process_shared_preload_libraries_in_progress) {
-		ereport(ERROR, (errmsg("pg_duckdb needs to be loaded via shared_preload_libraries"),
-		                errhint("Add pg_duckdb to shared_preload_libraries.")));
+		ereport(ERROR, (errmsg("pg_mooncake needs to be loaded via shared_preload_libraries"),
+		                errhint("Add pg_mooncake to shared_preload_libraries.")));
 	}
 
-	pgduckdb::InitGUC();
+	// pgduckdb::InitGUC();
 	pgduckdb::InitGUCHooks();
 	DuckdbInitHooks();
 	DuckdbInitNode();
-	pgduckdb::InitBackgroundWorkersShmem();
+	// pgduckdb::InitBackgroundWorkersShmem();
 	pgduckdb::RegisterDuckdbXactCallback();
 }
 } // extern "C"

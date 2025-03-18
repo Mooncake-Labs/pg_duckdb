@@ -7,8 +7,9 @@
 
 namespace pgduckdb {
 
-PostgresSchema::PostgresSchema(duckdb::Catalog &_catalog, duckdb::CreateSchemaInfo &_info, Snapshot _snapshot)
-    : SchemaCatalogEntry(_catalog, _info), snapshot(_snapshot), catalog(_catalog) {
+PostgresSchema::PostgresSchema(duckdb::Catalog &_catalog, duckdb::CreateSchemaInfo &_info, Snapshot _snapshot,
+                               uint64_t _lsn)
+    : SchemaCatalogEntry(_catalog, _info), snapshot(_snapshot), lsn(_lsn), catalog(_catalog) {
 }
 
 void
