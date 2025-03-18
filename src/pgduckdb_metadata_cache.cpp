@@ -216,7 +216,7 @@ IsExtensionRegistered() {
 		return false;
 	} else if (!ActiveSnapshotSet() && ActivePortal == nullptr) {
 		/* We're not in a transaction block, so we can't populate the cache */
-		return get_extension_oid("pg_duckdb", true) != InvalidOid;
+		return get_extension_oid("pg_mooncake", true) != InvalidOid;
 	}
 
 	cache.initializing = true;
@@ -233,12 +233,12 @@ IsExtensionRegistered() {
 		 * but for now this is acceptable.
 		 */
 		callback_is_configured = true;
-		schema_hash_value = GetSysCacheHashValue1(NAMESPACENAME, CStringGetDatum("duckdb"));
+		schema_hash_value = GetSysCacheHashValue1(NAMESPACENAME, CStringGetDatum("mooncake"));
 
 		CacheRegisterSyscacheCallback(NAMESPACENAME, InvalidateCaches, (Datum)0);
 	}
 
-	cache.extension_oid = get_extension_oid("pg_duckdb", true);
+	cache.extension_oid = get_extension_oid("pg_mooncake", true);
 	cache.installed = cache.extension_oid != InvalidOid;
 	cache.version++;
 
@@ -250,7 +250,7 @@ IsExtensionRegistered() {
 
 		cache.table_am_oid = GetSysCacheOid1(AMNAME, Anum_pg_am_oid, CStringGetDatum("duckdb"));
 
-		cache.schema_oid = get_namespace_oid("duckdb", false);
+		cache.schema_oid = get_namespace_oid("mooncake", false);
 		cache.row_oid = GetSysCacheOid2(TYPENAMENSP, Anum_pg_type_oid, CStringGetDatum("row"), cache.schema_oid);
 		cache.struct_oid = GetSysCacheOid2(TYPENAMENSP, Anum_pg_type_oid, CStringGetDatum("struct"), cache.schema_oid);
 		cache.unresolved_type_oid =

@@ -1,7 +1,7 @@
+#include "pgduckdb/catalog/mooncake_table.hpp"
 #include "pgduckdb/catalog/pgduckdb_catalog.hpp"
 #include "pgduckdb/catalog/pgduckdb_schema.hpp"
 #include "pgduckdb/catalog/pgduckdb_transaction.hpp"
-#include "pgduckdb/catalog/pgduckdb_table.hpp"
 #include "pgduckdb/scan/postgres_scan.hpp"
 #include "pgduckdb/pg/relations.hpp"
 
@@ -20,8 +20,8 @@ ClosePostgresRelations(duckdb::ClientContext &context) {
 }
 
 PostgresTransaction::PostgresTransaction(duckdb::TransactionManager &_manager, duckdb::ClientContext &_context,
-                                         PostgresCatalog &_catalog, Snapshot _snapshot)
-    : duckdb::Transaction(_manager, _context), catalog(_catalog), snapshot(_snapshot) {
+                                         PostgresCatalog &_catalog, Snapshot _snapshot, uint64_t _lsn)
+    : duckdb::Transaction(_manager, _context), catalog(_catalog), snapshot(_snapshot), lsn(_lsn) {
 }
 
 PostgresTransaction::~PostgresTransaction() {
@@ -51,8 +51,13 @@ SchemaItems::GetTable(const duckdb::string &entry_name) {
 	PostgresTable::SetTableInfo(info, rel);
 
 	auto cardinality = EstimateRelSize(rel);
-	tables.emplace(entry_name, duckdb::make_uniq<PostgresTable>(schema->catalog, *schema, info, rel, cardinality,
-	                                                            schema->snapshot));
+	if (IsMooncakeTable(rel)) {
+		tables.emplace(entry_name, duckdb::make_uniq<MooncakeTable>(schema->catalog, *schema, info, rel, cardinality,
+		                                                            schema->snapshot, rel_oid, schema->lsn));
+	} else {
+		tables.emplace(entry_name, duckdb::make_uniq<PostgresTable>(schema->catalog, *schema, info, rel, cardinality,
+		                                                            schema->snapshot));
+	}
 	return tables[entry_name].get();
 }
 
@@ -72,7 +77,7 @@ PostgresTransaction::GetSchema(const duckdb::string &name) {
 
 	duckdb::CreateSchemaInfo create_schema;
 	create_schema.schema = name;
-	auto pg_schema = duckdb::make_uniq<PostgresSchema>(catalog, create_schema, snapshot);
+	auto pg_schema = duckdb::make_uniq<PostgresSchema>(catalog, create_schema, snapshot, lsn);
 	schemas->emplace(std::make_pair(name, SchemaItems(std::move(pg_schema), name)));
 	return schemas->at(name).GetSchema();
 }
