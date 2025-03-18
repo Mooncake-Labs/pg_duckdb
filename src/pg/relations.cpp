@@ -39,6 +39,13 @@ namespace pgduckdb {
 // clang-format on
 #endif
 
+extern "C" bool is_mooncakeam(const TableAmRoutine *am);
+
+bool
+IsMooncakeTable(Relation rel) {
+	return is_mooncakeam(rel->rd_tableam);
+}
+
 TupleDesc
 RelationGetDescr(Relation rel) {
 	return rel->rd_att;
