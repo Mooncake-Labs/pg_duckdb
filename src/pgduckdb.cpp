@@ -36,19 +36,19 @@ bool duckdb_autoinstall_known_extensions = true;
 bool duckdb_autoload_known_extensions = true;
 
 extern "C" {
-PG_MODULE_MAGIC;
+// PG_MODULE_MAGIC;
 
 void
-_PG_init(void) {
-	if (!process_shared_preload_libraries_in_progress) {
-		ereport(ERROR, (errmsg("pg_duckdb needs to be loaded via shared_preload_libraries"),
-		                errhint("Add pg_duckdb to shared_preload_libraries.")));
-	}
+init_pg_duckdb(void) {
+	// if (!process_shared_preload_libraries_in_progress) {
+	// 	ereport(ERROR, (errmsg("pg_duckdb needs to be loaded via shared_preload_libraries"),
+	// 	                errhint("Add pg_duckdb to shared_preload_libraries.")));
+	// }
 
-	DuckdbInitGUC();
+	// DuckdbInitGUC();
 	DuckdbInitHooks();
 	DuckdbInitNode();
-	pgduckdb::InitBackgroundWorkersShmem();
+	// pgduckdb::InitBackgroundWorkersShmem();
 	pgduckdb::RegisterDuckdbXactCallback();
 }
 } // extern "C"
@@ -128,7 +128,7 @@ static const struct config_enum_entry motherduck_enabled_options[] = {
 };
 /* clang-format on */
 
-static void
+[[maybe_unused]] static void
 DuckdbInitGUC(void) {
 	DefineCustomVariable("duckdb.force_execution", "Force queries to use DuckDB execution", &duckdb_force_execution);
 
