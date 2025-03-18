@@ -16,7 +16,8 @@ PostgresTransactionManager::PostgresTransactionManager(duckdb::AttachedDatabase 
 
 duckdb::Transaction &
 PostgresTransactionManager::StartTransaction(duckdb::ClientContext &context) {
-	auto transaction = duckdb::make_uniq<PostgresTransaction>(*this, context, catalog, GetActiveSnapshot());
+	auto transaction =
+	    duckdb::make_uniq<PostgresTransaction>(*this, context, catalog, GetActiveSnapshot(), GetActiveLsn());
 	auto &result = *transaction;
 	duckdb::lock_guard<duckdb::mutex> l(transaction_lock);
 	transactions[result] = std::move(transaction);
