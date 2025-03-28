@@ -1,5 +1,6 @@
 #include "pgduckdb/catalog/pgduckdb_table.hpp"
 
+#include "pgduckdb/scan/mooncake_scan.hpp"
 #include "pgduckdb/scan/postgres_scan.hpp"
 #include "pgduckdb/catalog/pgduckdb_schema.hpp"
 #include "pgduckdb/logger.hpp"
@@ -52,7 +53,10 @@ PostgresTable::GetStatistics(duckdb::ClientContext &, duckdb::column_t) {
 }
 
 duckdb::TableFunction
-PostgresTable::GetScanFunction(duckdb::ClientContext &, duckdb::unique_ptr<duckdb::FunctionData> &bind_data) {
+PostgresTable::GetScanFunction(duckdb::ClientContext &context, duckdb::unique_ptr<duckdb::FunctionData> &bind_data) {
+	if (IsMooncakeTable(rel)) {
+		return GetMooncakeScanFunction(context, *this, cardinality, bind_data);
+	}
 	bind_data = duckdb::make_uniq<PostgresScanFunctionData>(rel, cardinality, snapshot);
 	return PostgresScanTableFunction();
 }
