@@ -31,7 +31,7 @@ extern "C" {
 #include "catalog/namespace.h"
 #include "common/file_perm.h"
 #include "lib/stringinfo.h"
-#include "miscadmin.h" // superuser
+#include "miscadmin.h"        // superuser
 #include "nodes/value.h"      // strVal
 #include "utils/fmgrprotos.h" // pg_sequence_last_value
 #include "utils/lsyscache.h"  // get_relname_relid
