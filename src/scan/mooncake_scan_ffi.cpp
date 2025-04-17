@@ -1,19 +1,19 @@
 #include "pgduckdb/scan/mooncake_scan_ffi.hpp"
 #include "pgduckdb/pgduckdb_utils.hpp"
 
-extern "C" void mooncake_scan_begin(const char *schema, const char *table, uint8_t **data, size_t *len);
+extern "C" void mooncake_scan_table_begin(const char *schema, const char *table, uint8_t **data, size_t *len);
 
-extern "C" void mooncake_scan_end(const char *schema, const char *table, uint8_t *data, size_t len);
+extern "C" void mooncake_scan_table_end(const char *schema, const char *table, uint8_t *data, size_t len);
 
 namespace pgduckdb {
 
 MooncakeScanFfi::MooncakeScanFfi(duckdb::string _schema, duckdb::string _table)
     : schema(std::move(_schema)), table(std::move(_table)) {
-	PostgresFunctionGuard(mooncake_scan_begin, schema.c_str(), table.c_str(), &data, &len);
+	PostgresFunctionGuard(mooncake_scan_table_begin, schema.c_str(), table.c_str(), &data, &len);
 }
 
 MooncakeScanFfi::~MooncakeScanFfi() {
-	PostgresFunctionGuard(mooncake_scan_end, schema.c_str(), table.c_str(), data, len);
+	PostgresFunctionGuard(mooncake_scan_table_end, schema.c_str(), table.c_str(), data, len);
 }
 
 MooncakeTableMetadata
