@@ -27,7 +27,7 @@ pgduckdb_init(void) {
 		                errhint("Add pg_mooncake to shared_preload_libraries.")));
 	}
 
-	// pgduckdb::InitGUC();
+	pgduckdb::InitGUC();
 	pgduckdb::InitGUCHooks();
 	DuckdbInitHooks();
 	DuckdbInitNode();
