@@ -182,7 +182,8 @@ MooncakeTable::GetScanFunction(ClientContext &context, unique_ptr<FunctionData> 
 	mooncake_scan.get_multi_file_reader = MooncakeMultiFileReader::Create;
 	mooncake_scan.function_info = make_shared_ptr<MooncakeFunctionInfo>(*this);
 	vector<Value> inputs {""};
-	named_parameter_map_t named_parameters;
+	named_parameter_map_t named_parameters {{"explicit_cardinality", Value::UBIGINT(cardinality)}};
+	;
 	vector<LogicalType> input_table_types;
 	vector<string> input_table_names;
 	TableFunctionBindInput bind_input(inputs, named_parameters, input_table_types, input_table_names, nullptr /*info*/,
