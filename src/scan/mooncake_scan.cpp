@@ -4,15 +4,52 @@
 #include "duckdb/parser/tableref/table_function_ref.hpp"
 #include "parquet_reader.hpp"
 #include "pgduckdb/catalog/mooncake_table.hpp"
+#include "pgduckdb/pgduckdb_utils.hpp"
 
 using namespace duckdb;
 
+extern "C" void mooncake_drop_data(uint8_t *data, size_t len);
+
+extern "C" void mooncake_get_parquet_metadata(const char *data_file, uint8_t **data, size_t *len);
+
 namespace pgduckdb {
 
+struct ParquetMetadataFfi {
+	ParquetMetadataFfi(const string &data_file) : data(nullptr), len(0) {
+		PostgresFunctionGuard(mooncake_get_parquet_metadata, data_file.c_str(), &data, &len);
+	}
+
+	ParquetMetadataFfi(const ParquetMetadataFfi &) = delete;
+	ParquetMetadataFfi &operator=(const ParquetMetadataFfi &) = delete;
+
+	~ParquetMetadataFfi() {
+		if (data) {
+			PostgresFunctionGuard(mooncake_drop_data, data, len);
+		}
+	}
+
+	uint8_t *data;
+	size_t len;
+};
+
 struct DataFileStatistics : public ObjectCacheEntry {
-public:
 	DataFileStatistics(ClientContext &context, string data_file, const vector<string> &names) : column_stats() {
-		ParquetReader reader(context, data_file, ParquetOptions(context));
+		using duckdb_apache::thrift::protocol::TCompactProtocolT;
+		using duckdb_apache::thrift::transport::TMemoryBuffer;
+		using duckdb_parquet::FileMetaData;
+
+		ParquetMetadataFfi ffi(data_file);
+		auto transport = std::make_shared<TMemoryBuffer>(ffi.data, ffi.len);
+		auto protocol = make_uniq<TCompactProtocolT<TMemoryBuffer>>(std::move(transport));
+		auto file_metadata = make_uniq<FileMetaData>();
+		file_metadata->read(protocol.get());
+		auto fs = CachingFileSystem::Get(context);
+		// HACK: use a dummy file since reader only reads statistics from metadata
+		OpenFileInfo file("/dev/null");
+		auto handle = fs.OpenFile(file, FileOpenFlags(FileOpenFlags::FILE_FLAGS_READ));
+		auto metadata =
+		    make_shared_ptr<ParquetFileMetadataCache>(std::move(file_metadata), *handle, nullptr /*geo_metadata*/);
+		ParquetReader reader(context, file, ParquetOptions(), std::move(metadata));
 		for (auto &name : names) {
 			column_stats[name] = reader.ReadStatistics(name);
 		}
