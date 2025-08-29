@@ -8,38 +8,25 @@
 
 using namespace duckdb;
 
-extern "C" void mooncake_drop_data(uint8_t *data, size_t len);
+struct ParquetMetadata;
 
-extern "C" void mooncake_get_parquet_metadata(const char *data_file, uint8_t **data, size_t *len);
+extern "C" ParquetMetadata *mooncake_parquet_metadatas_new(size_t data_files_len, const char **data_files_ptr);
+
+extern "C" void mooncake_parquet_metadatas_drop(ParquetMetadata *parquet_metadatas);
+
+extern "C" void mooncake_parquet_metadatas_get(ParquetMetadata *parquet_metadatas, size_t i, uint8_t **data,
+                                               size_t *len);
 
 namespace pgduckdb {
 
-struct ParquetMetadataFfi {
-	ParquetMetadataFfi(const string &data_file) : data(nullptr), len(0) {
-		PostgresFunctionGuard(mooncake_get_parquet_metadata, data_file.c_str(), &data, &len);
-	}
-
-	ParquetMetadataFfi(const ParquetMetadataFfi &) = delete;
-	ParquetMetadataFfi &operator=(const ParquetMetadataFfi &) = delete;
-
-	~ParquetMetadataFfi() {
-		if (data) {
-			PostgresFunctionGuard(mooncake_drop_data, data, len);
-		}
-	}
-
-	uint8_t *data;
-	size_t len;
-};
-
 struct DataFileStatistics : public ObjectCacheEntry {
-	DataFileStatistics(ClientContext &context, string data_file, const vector<string> &names) : column_stats() {
+	DataFileStatistics(ClientContext &context, const vector<string> &names, uint8_t *data, size_t len)
+	    : column_stats() {
 		using duckdb_apache::thrift::protocol::TCompactProtocolT;
 		using duckdb_apache::thrift::transport::TMemoryBuffer;
 		using duckdb_parquet::FileMetaData;
 
-		ParquetMetadataFfi ffi(data_file);
-		auto transport = std::make_shared<TMemoryBuffer>(ffi.data, ffi.len);
+		auto transport = std::make_shared<TMemoryBuffer>(data, len);
 		auto protocol = make_uniq<TCompactProtocolT<TMemoryBuffer>>(std::move(transport));
 		auto file_metadata = make_uniq<FileMetaData>();
 		file_metadata->read(protocol.get());
@@ -70,6 +57,37 @@ struct DataFileStatistics : public ObjectCacheEntry {
 
 static ObjectCache mooncake_stats;
 
+struct GetParquetMetadatasFfi {
+	GetParquetMetadatasFfi() : parquet_metadatas(nullptr) {
+	}
+
+	GetParquetMetadatasFfi(const GetParquetMetadatasFfi &) = delete;
+	GetParquetMetadatasFfi &operator=(const GetParquetMetadatasFfi &) = delete;
+
+	~GetParquetMetadatasFfi() {
+		if (parquet_metadatas) {
+			PostgresFunctionGuard(mooncake_parquet_metadatas_drop, parquet_metadatas);
+		}
+	}
+
+	void Execute(ClientContext &context, const vector<string> &names, const vector<string> &data_files) {
+		vector<const char *> data_files_ptr;
+		for (auto &data_file : data_files) {
+			data_files_ptr.push_back(data_file.c_str());
+		}
+		parquet_metadatas =
+			PostgresFunctionGuard(mooncake_parquet_metadatas_new, data_files.size(), data_files_ptr.data());
+		for (size_t i = 0; i < data_files.size(); i++) {
+			uint8_t *data;
+			size_t len;
+			PostgresFunctionGuard(mooncake_parquet_metadatas_get, parquet_metadatas, i, &data, &len);
+			mooncake_stats.Put(data_files[i], make_shared_ptr<DataFileStatistics>(context, names, data, len));
+		}
+	}
+
+	ParquetMetadata *parquet_metadatas;
+};
+
 struct MooncakeMultiFileList : public MultiFileList {
 	MooncakeMultiFileList(MooncakeTable &_table)
 	    : MultiFileList({}, FileGlobOptions::ALLOW_EMPTY), table(_table), metadata(), data_files(),
@@ -81,10 +99,26 @@ struct MooncakeMultiFileList : public MultiFileList {
 	LazyInitialize(ClientContext &context, const vector<string> &names, const vector<column_t> &column_ids,
 	               optional_ptr<TableFilterSet> filters) {
 		metadata = &table.GetTableMetadata();
+		vector<string> new_data_files;
+		for (uint32_t data_file_number = 0; data_file_number < metadata->GetNumDataFiles(); data_file_number++) {
+			auto data_file = metadata->GetDataFile(data_file_number);
+			if (mooncake_stats.Get<DataFileStatistics>(data_file) == nullptr) {
+				new_data_files.push_back(std::move(data_file));
+				if (new_data_files.size() == 100) {
+					GetParquetMetadatasFfi().Execute(context, names, new_data_files);
+					new_data_files.clear();
+				}
+			}
+		}
+		if (new_data_files.size()) {
+			GetParquetMetadatasFfi().Execute(context, names, new_data_files);
+		}
+
 		for (uint32_t data_file_number = 0; data_file_number < metadata->GetNumDataFiles(); data_file_number++) {
 			auto data_file = metadata->GetDataFile(data_file_number);
 			if (filters) {
-				auto file_stats = mooncake_stats.GetOrCreate<DataFileStatistics>(data_file, context, data_file, names);
+				auto file_stats = mooncake_stats.Get<DataFileStatistics>(data_file);
+				D_ASSERT(file_stats != nullptr);
 				auto skip_file = [&](auto &entry) {
 					if (IsVirtualColumn(column_ids[entry.first])) {
 						return false;
